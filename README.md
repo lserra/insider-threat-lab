@@ -1,8 +1,6 @@
 # Observability Go Example
 
-[Blog Reference](https://dev.to/booscaaa/implementando-observabilidade-em-aplicacoes-go-com-opentelemetry-prometheus-loki-tempo-e-grafana-1hei)
-
-This project demonstrates an observability setup using Docker Compose. 
+This project demonstrates an observability setup using Docker Compose.
 It includes services for monitoring, logging, and tracing using Traefik, Prometheus, Tempo, Loki, and Grafana.
 
 ## Services
@@ -30,11 +28,13 @@ docker-compose up -d
 ```
 
 ### Accessing the Services
+
 - Traefik: http://localhost:8080
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3000 (Default login: admin/lS071134)
 
 ### Configuration
+
 - Traefik : Configured to route traffic to services based on path prefixes.
 - Prometheus : Configuration file located at ./config-files/prometheus.yaml .
 - Tempo : Configuration file located at ./config-files/tempo.yaml .
@@ -50,6 +50,7 @@ curl http://localhost:8081/service1
 ```
 
 ### Stopping the Services
+
 To stop all services, run:
 
 ```bash
@@ -57,6 +58,7 @@ docker-compose down
 ```
 
 ### Estrutura do Projeto
+
 - **cmd** : Contém o ponto de entrada da aplicação, que é implementado usando o cobra-cli . 
 O arquivo serve.go define o comando para iniciar o serviço HTTP instrumentado com OpenTelemetry.
 - **config-files** : Armazena arquivos de configuração para as ferramentas de observabilidade, 
@@ -88,7 +90,8 @@ flowchart TD
     D --> |consulta, visualiza| E(Log Stream Dashboards)
 ```
 
-**Fluxo de Dados de Tracing e Logs**
+### Fluxo de Dados de Tracing e Logs
+
 1. __Aplicação Go__: Gera spans de trace e logs estruturados para cada requisição. O TraceID é a "cola" que liga tudo.
 2. __OpenTelemetry Collector__: Recebe traces e logs da aplicação na porta 4318.
  - O pipeline de traces envia os dados para o Tempo.
