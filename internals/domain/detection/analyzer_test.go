@@ -41,8 +41,35 @@ func TestAnalyzeDirectoryCorrelatesSecuritySignals(t *testing.T) {
 	if report.Events != 2 || len(report.Findings) != 2 {
 		t.Fatalf("expected two events and findings, got %#v", report)
 	}
-	if len(report.Users) != 1 || report.Users[0].UserID != "user9" || report.Users[0].TotalScore != 11 || report.Users[0].HighestScore != 6 {
+	if len(report.Users) != 1 || report.Users[0].UserID != "user9" || report.Users[0].TotalScore != 11 || report.Users[0].HighestScore != 6 || report.Users[0].Severity != "critical" {
 		t.Fatalf("expected correlated high-risk user, got %#v", report.Users)
+	}
+}
+
+func TestSeverityForScore(t *testing.T) {
+	cases := map[int]string{1: "low", 2: "medium", 4: "high", 6: "critical"}
+	for score, expected := range cases {
+		if got := SeverityForScore(score); got != expected {
+			t.Errorf("score %d: expected %s, got %s", score, expected, got)
+		}
+	}
+}
+
+func TestPrometheusIncludesRiskMetrics(t *testing.T) {
+	report := Report{
+		Events:   2,
+		Findings: []Finding{{Severity: "critical"}, {Severity: "high"}},
+		Users:    []UserSummary{{UserID: "user\"1", Severity: "critical", TotalScore: 8}},
+	}
+	metrics := Prometheus(report)
+	for _, expected := range []string{
+		"insider_events_total 2",
+		`insider_findings_by_severity{severity="critical"} 1`,
+		`insider_user_risk_score{user_id="user\"1",severity="critical"} 8`,
+	} {
+		if !strings.Contains(metrics, expected) {
+			t.Errorf("metrics missing %q:\n%s", expected, metrics)
+		}
 	}
 }
 

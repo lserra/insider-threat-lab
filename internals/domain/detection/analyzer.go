@@ -29,6 +29,7 @@ type Finding struct {
 	FileSize    int64    `json:"file_size"`
 	Destination string   `json:"destination"`
 	Score       int      `json:"score"`
+	Severity    string   `json:"severity"`
 	Signals     []string `json:"signals"`
 	Evidence    string   `json:"evidence,omitempty"`
 }
@@ -40,6 +41,7 @@ type UserSummary struct {
 	Findings     int    `json:"findings"`
 	TotalScore   int    `json:"total_score"`
 	HighestScore int    `json:"highest_score"`
+	Severity     string `json:"severity"`
 }
 
 type Report struct {
@@ -132,7 +134,21 @@ func detectGenericEvent(event genericEvent, source string) (Finding, bool) {
 	if parsed, err := time.Parse(time.RFC3339Nano, finding.Timestamp); err == nil && (parsed.Hour() < 6 || parsed.Hour() >= 20) {
 		addSignal(1, "outside_business_hours", parsed.Format(time.RFC3339))
 	}
+	finding.Severity = SeverityForScore(finding.Score)
 	return finding, finding.Score > 0
+}
+
+func SeverityForScore(score int) string {
+	switch {
+	case score >= 6:
+		return "critical"
+	case score >= 4:
+		return "high"
+	case score >= 2:
+		return "medium"
+	default:
+		return "low"
+	}
 }
 
 func userID(event genericEvent) string { return stringValue(event, "user_id") }
@@ -181,6 +197,7 @@ func Analyze(r io.Reader, input string) (Report, error) {
 			finding.Signals = append(finding.Signals, "external_destination")
 		}
 		if finding.Score > 0 {
+			finding.Severity = SeverityForScore(finding.Score)
 			report.Findings = append(report.Findings, finding)
 			user.Findings++
 			if finding.Score > user.HighestScore {
@@ -214,6 +231,7 @@ func summarize(report Report) Report {
 		}
 		if finding.Score > user.HighestScore {
 			user.HighestScore = finding.Score
+			user.Severity = SeverityForScore(finding.Score)
 		}
 	}
 	report.Users = nil
@@ -221,10 +239,18 @@ func summarize(report Report) Report {
 		report.Users = append(report.Users, *user)
 	}
 	sort.Slice(report.Users, func(i, j int) bool {
-		if report.Users[i].HighestScore == report.Users[j].HighestScore {
-			return report.Users[i].UserID < report.Users[j].UserID
+		if report.Users[i].TotalScore == report.Users[j].TotalScore {
+			if report.Users[i].HighestScore == report.Users[j].HighestScore {
+				return report.Users[i].UserID < report.Users[j].UserID
+			}
+			return report.Users[i].HighestScore > report.Users[j].HighestScore
 		}
-		return report.Users[i].HighestScore > report.Users[j].HighestScore
+		return report.Users[i].TotalScore > report.Users[j].TotalScore
 	})
+	for i := range report.Users {
+		if report.Users[i].Severity == "" {
+			report.Users[i].Severity = SeverityForScore(report.Users[i].TotalScore)
+		}
+	}
 	return report
 }
