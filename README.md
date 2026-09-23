@@ -123,3 +123,7 @@ flowchart TD
     C --> E(Grafana)
     D --> E
 ```
+
+### Monitoring Results
+
+![alt text](image.png)
