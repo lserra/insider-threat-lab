@@ -1,6 +1,7 @@
 package detection
 
 import (
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -70,6 +71,23 @@ func TestPrometheusIncludesRiskMetrics(t *testing.T) {
 		if !strings.Contains(metrics, expected) {
 			t.Errorf("metrics missing %q:\n%s", expected, metrics)
 		}
+	}
+}
+
+func TestHandlerExposesMetricsAndReport(t *testing.T) {
+	report := Report{Events: 1}
+	handler := Handler(report)
+
+	metrics := httptest.NewRecorder()
+	handler.ServeHTTP(metrics, httptest.NewRequest("GET", "/metrics", nil))
+	if metrics.Code != 200 || !strings.Contains(metrics.Body.String(), "insider_events_total 1") {
+		t.Fatalf("unexpected metrics response: %d %s", metrics.Code, metrics.Body.String())
+	}
+
+	reportResponse := httptest.NewRecorder()
+	handler.ServeHTTP(reportResponse, httptest.NewRequest("GET", "/report", nil))
+	if reportResponse.Code != 200 || !strings.Contains(reportResponse.Body.String(), `"events":1`) {
+		t.Fatalf("unexpected report response: %d %s", reportResponse.Code, reportResponse.Body.String())
 	}
 }
 

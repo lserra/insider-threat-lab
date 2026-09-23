@@ -248,9 +248,7 @@ func summarize(report Report) Report {
 		return report.Users[i].TotalScore > report.Users[j].TotalScore
 	})
 	for i := range report.Users {
-		if report.Users[i].Severity == "" {
-			report.Users[i].Severity = SeverityForScore(report.Users[i].TotalScore)
-		}
+		report.Users[i].Severity = SeverityForScore(report.Users[i].TotalScore)
 	}
 	return report
 }

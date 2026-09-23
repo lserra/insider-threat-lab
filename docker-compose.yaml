@@ -19,7 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ${SERVICE1_NAME}
+    container_name: ${SERVICE1_NAME:-service1}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.service1.rule=PathPrefix(`/service1`)"
@@ -28,8 +28,8 @@ services:
       - "traefik.http.middlewares.strip-service1-prefix.stripprefix.prefixes=/service1"
       - "traefik.http.services.service1.loadbalancer.server.port=8080"
     environment:
-      - SERVICE_NAME=${SERVICE1_NAME}
-      - SERVICE_CALL_URL=${SERVICE2_CALL_URL}
+      - SERVICE_NAME=${SERVICE1_NAME:-service1}
+      - SERVICE_CALL_URL=${SERVICE2_CALL_URL:-http://service2:8080}
     networks:
       - observability-network
 
@@ -37,7 +37,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ${SERVICE2_NAME}
+    container_name: ${SERVICE2_NAME:-service2}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.service2.rule=PathPrefix(`/service2`)"
@@ -46,8 +46,8 @@ services:
       - "traefik.http.middlewares.strip-service2-prefix.stripprefix.prefixes=/service2"
       - "traefik.http.services.service2.loadbalancer.server.port=8080"
     environment:
-      - SERVICE_NAME=${SERVICE2_NAME}
-      - SERVICE_CALL_URL=${SERVICE3_CALL_URL}
+      - SERVICE_NAME=${SERVICE2_NAME:-service2}
+      - SERVICE_CALL_URL=${SERVICE3_CALL_URL:-http://service3:8080}
     networks:
       - observability-network
 
@@ -55,7 +55,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ${SERVICE3_NAME}
+    container_name: ${SERVICE3_NAME:-service3}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.service3.rule=PathPrefix(`/service3`)"
@@ -64,7 +64,17 @@ services:
       - "traefik.http.middlewares.strip-service3-prefix.stripprefix.prefixes=/service3"
       - "traefik.http.services.service3.loadbalancer.server.port=8080"
     environment:
-      - SERVICE_NAME=${SERVICE3_NAME}
+      - SERVICE_NAME=${SERVICE3_NAME:-service3}
+    networks:
+      - observability-network
+
+  detection-analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile.analyzer
+    container_name: detection-analyzer
+    expose:
+      - "9464"
     networks:
       - observability-network
 
@@ -73,6 +83,7 @@ services:
     container_name: prometheus
     volumes:
       - ./config-files/prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./config-files/alert-rules.yaml:/etc/prometheus/alert-rules.yaml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -131,6 +142,8 @@ services:
     container_name: grafana
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./config-files/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./dashboards:/var/lib/grafana/dashboards:ro
     ports:
       - "3000:3000"
     environment:
