@@ -11,7 +11,16 @@ import (
 
 func main() {
 	inputFile := flag.String("input", "data/large_file_transfer_logs.json", "JSON file containing transfer events")
+	inputDir := flag.String("input-dir", "", "directory containing behavioral JSON logs")
 	flag.Parse()
+	if *inputDir != "" {
+		report, err := detection.AnalyzeDirectory(*inputDir)
+		if err != nil {
+			fail("analyze directory", err)
+		}
+		writeReport(report)
+		return
+	}
 
 	file, err := os.Open(*inputFile)
 	if err != nil {
@@ -24,6 +33,10 @@ func main() {
 		fail("analyze input", err)
 	}
 
+	writeReport(report)
+}
+
+func writeReport(report detection.Report) {
 	encoder := json.NewEncoder(os.Stdout)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(report); err != nil {
