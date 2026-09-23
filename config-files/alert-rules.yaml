@@ -1,0 +1,32 @@
+groups:
+  - name: insider-threat
+    rules:
+      - alert: InsiderThreatCriticalUser
+        expr: insider_user_risk_score{severity="critical"} >= 6
+        for: 5m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Usuário com risco crítico de abuso interno"
+          description: "{{ $labels.user_id }} atingiu score acumulado {{ $value }}."
+
+      - alert: InsiderThreatHighUser
+        expr: insider_user_risk_score{severity="high"} >= 4
+        for: 10m
+        labels:
+          severity: warning
+          team: security
+        annotations:
+          summary: "Usuário com risco alto de abuso interno"
+          description: "{{ $labels.user_id }} atingiu score acumulado {{ $value }}."
+
+      - alert: InsiderThreatCriticalFindings
+        expr: insider_findings_by_severity{severity="critical"} > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: security
+        annotations:
+          summary: "Finding crítico detectado"
+          description: "Existem {{ $value }} findings críticos no relatório atual."
